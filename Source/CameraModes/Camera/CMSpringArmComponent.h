@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "GameplayTagContainer.h"
 #include "CameraSubsystems/CMCameraSubsystem.h"
 #include "Components/SceneComponent.h"
 #include "CMSpringArmComponent.generated.h"
@@ -30,12 +31,12 @@ public:
 	virtual void QuerySupportedSockets(TArray<FComponentSocketDescription>& OutSockets) const override;
 	// End of USceneComponent interface
 
-
+	
 	UFUNCTION(BlueprintCallable)
-	void SetCameraMode(UCMCameraMode* NewCameraMode);
+	void SetCameraMode(FGameplayTag CameraModeTag);
 	
 	UFUNCTION(BlueprintPure)
-	UCMCameraMode* GetCurrentCameraMode() const;
+    UCMCameraMode* GetCurrentCameraMode() const;
 
 	UFUNCTION(BlueprintPure)
 	const TArray<UCMCameraSubsystem*>& GetCameraSubsystems() const;
@@ -56,16 +57,32 @@ public:
 		}
 		return nullptr;
 	}
+
+	APlayerController* GetOwningController() const;
+
+	FRotator GetPlayerRotationInput() const;
 	
 public:
 	UPROPERTY(EditAnywhere, Category="Camera Modes")
-	UCMCameraMode* InitialCameraMode;
+	TArray<UCMCameraMode*> CameraModes;
 
+	UPROPERTY(EditAnywhere, Category="Camera Modes")
+	FGameplayTag InitialCameraModeTag;
+
+private:
+	void OnControllerRotationInput(FRotator InPlayerInput);
+
+	void SetCameraMode(UCMCameraMode* NewCameraMode);
+	
 private:
 	UPROPERTY(Transient)
 	UCMCameraMode* CurrentCameraMode;
 
 	UPROPERTY(Transient)
 	TArray<UCMCameraSubsystem*> CameraSubsystems;
+
+	FRotator PlayerRotationInput;
 	
 };
+
+

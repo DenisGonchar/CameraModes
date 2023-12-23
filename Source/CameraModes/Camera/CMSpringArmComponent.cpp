@@ -2,6 +2,7 @@
 #include "CMSpringArmComponent.h"
 
 #include "CMCameraMode.h"
+#include "CameraModes/CMPlayerController.h"
 #include "CameraSubsystems/CMCameraSubsystem_Transform.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -21,13 +22,34 @@ void UCMSpringArmComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetCameraMode(InitialCameraMode);
+	if (const auto playerController = Cast<ACMPlayerController>(GetOwningController()))
+	{
+		playerController->OnRotationInputTickDelegate.AddUObject(this, &UCMSpringArmComponent::OnControllerRotationInput);
+	}
+	
+	SetCameraMode(InitialCameraModeTag);
 }
 
 void UCMSpringArmComponent::SetCameraMode(UCMCameraMode* NewCameraMode)
 {
 	if (NewCameraMode != nullptr && CurrentCameraMode != NewCameraMode)
 	{
+				
+		CurrentCameraMode = NewCameraMode;
+
+		TArray<UCMCameraSubsystem*> newCameraSubsystems;
+		for (const auto subsystemTemplate : CurrentCameraMode->CameraSubsystems)
+		{
+			if (subsystemTemplate != nullptr)
+			{
+				const auto subsystem = DuplicateObject<UCMCameraSubsystem>(subsystemTemplate, this);
+				//const auto subsystem = NewObject<UCMCameraSubsystem>(this, subsystemTemplate);
+				subsystem->SetOwningSpringArm(this);
+				subsystem->OnEnterToCameraMode();
+				newCameraSubsystems.Add(subsystem);
+			}
+		}
+
 		for (const auto subsystem : CameraSubsystems)
 		{
 			if (subsystem != nullptr)
@@ -35,22 +57,34 @@ void UCMSpringArmComponent::SetCameraMode(UCMCameraMode* NewCameraMode)
 				subsystem->ConditionalBeginDestroy();			
 			}
 		}
-		CameraSubsystems.Empty();
-		
-		CurrentCameraMode = NewCameraMode;
-
-		for (const auto subsystemClass : CurrentCameraMode->CameraSubsystems)
-		{
-			if (subsystemClass != nullptr)
-			{
-				const auto subsystem = NewObject<UCMCameraSubsystem>(this, subsystemClass);
-
-				subsystem->SetOwningSpringArm(this);
-
-				CameraSubsystems.Add(subsystem);
-			}
-		}
+		CameraSubsystems = newCameraSubsystems;
 	}
+}
+
+void UCMSpringArmComponent::SetCameraMode(FGameplayTag CameraModeTag)
+{
+	const auto foundCameraMode = Algo::FindByPredicate(CameraModes, [CameraModeTag](UCMCameraMode* CameraMode)
+	{
+		return CameraMode != nullptr && CameraMode->CameraModeTag == CameraModeTag;
+	});
+
+	if (foundCameraMode != nullptr)
+	{
+		SetCameraMode(*foundCameraMode);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Camera mode don't found! Tag: %s"), *CameraModeTag.ToString());
+	}
+	
+	// for (const auto cameraMode : CameraModes)
+	// {
+	// 	if (cameraMode != nullptr && cameraMode->CameraModeTag == CameraModeTag)
+	// 	{
+	// 		SetCameraMode(cameraMode);
+	// 		break;
+	// 	}
+	// }
 }
 
 UCMCameraMode* UCMSpringArmComponent::GetCurrentCameraMode() const
@@ -70,6 +104,21 @@ const TArray<UCMCameraSubsystem*>& UCMSpringArmComponent::GetCameraSubsystems() 
 	return CameraSubsystems;
 }
 
+APlayerController* UCMSpringArmComponent::GetOwningController() const
+{
+	const auto owningPawn = GetOwner<APawn>();
+	return owningPawn != nullptr ? Cast<APlayerController>(owningPawn->Controller) : nullptr;
+}
+
+FRotator UCMSpringArmComponent::GetPlayerRotationInput() const
+{
+	return PlayerRotationInput;	
+}
+
+void UCMSpringArmComponent::OnControllerRotationInput(FRotator InPlayerInput)
+{
+	PlayerRotationInput = InPlayerInput;
+}
 
 void UCMSpringArmComponent::OnRegister()
 {
@@ -83,14 +132,18 @@ void UCMSpringArmComponent::TickComponent(float DeltaTime, enum ELevelTick TickT
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	for (const auto subsystem : CameraSubsystems)
+	if (const auto playerController = GetOwningController())
 	{
-		if (subsystem != nullptr)
-		{
-			subsystem->Tick(DeltaTime);
-		}
-		
+		for (const auto subsystem : CameraSubsystems)
+        {
+        	if (subsystem != nullptr)
+        	{
+        		subsystem->Tick(DeltaTime);
+        	}
+        	
+        }
 	}
+	
 	UpdateChildTransforms();
 }
 

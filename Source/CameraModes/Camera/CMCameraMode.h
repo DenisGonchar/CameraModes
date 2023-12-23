@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "CMCameraMode.generated.h"
 
@@ -14,7 +15,9 @@ class CAMERAMODES_API UCMCameraMode : public UDataAsset
 	GENERATED_BODY()
 
 public:
-
-	UPROPERTY(EditAnywhere)
-	TArray<TSubclassOf<UCMCameraSubsystem>> CameraSubsystems;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGameplayTag CameraModeTag;
+	
+	UPROPERTY(EditAnywhere, Instanced)
+	TArray<UCMCameraSubsystem*> CameraSubsystems;
 };

@@ -17,6 +17,8 @@ class CAMERAMODES_API UCMCameraSubsystem_Transform : public UCMCameraSubsystem
 public:
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void OnEnterToCameraMode() override;
+	
 	UFUNCTION(BlueprintCallable, Category=SpringArm)
 	FRotator GetTargetRotation() const;
 
@@ -35,14 +37,44 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
 	float TargetArmLength = 300.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
+	float TargetArmLengthSpeed = 1.f;
+	
 	/** offset at end of spring arm; use this instead of the relative offset of the attached component to ensure the line trace works as desired */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
 	FVector SocketOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
+	float SocketOffsetSpeed = 1.f;
 
 	/** Offset at start of spring, applied in world space. Use this if you want a world-space offset from the parent component instead of the usual relative-space offset. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
 	FVector TargetOffset = FVector::ZeroVector;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
+	float TargetOffsetSpeed = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float ViewPitchMin = -40.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float ViewPitchMax = 60.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float ViewMinMaxSpeed = 50.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float DesiredViewPitch = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float MinTimeToActivateDesiredViewPitch = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float MinVelocityToActivateDesiredViewPitch = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=View)
+	float MinPlayerInputToStopDesiredViewPitch = 10.f;
+	
 	/** How big should the query probe sphere be (in unreal units) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=CameraCollision, meta=(editcondition="bDoCollisionTest"))
 	float ProbeSize =  12.f;
@@ -125,7 +157,10 @@ public:
 #pragma endregion
 
 protected:
-	
+	FVector CurrentSocketOffset = FVector::ZeroVector;
+	FVector CurrentTargetOffset = FVector::ZeroVector;
+	float CurrentTargetArmLength = 100.0f;
+
 	/** Get the position where the camera should be without applying the Collision Test displacement */
 	UFUNCTION(BlueprintCallable, Category=CameraCollision)
 	FVector GetUnfixedCameraPosition() const;
@@ -149,6 +184,8 @@ protected:
 	virtual FVector BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime);
 
 protected:
+	float TimeBlockedDesiredView = 0.f;
+	
 	/** Temporary variables when applying Collision Test displacement to notify if its being applied and by how much */
 	bool bIsCameraFixed = false;
 	FVector UnfixedCameraPosition = FVector::ZeroVector;
