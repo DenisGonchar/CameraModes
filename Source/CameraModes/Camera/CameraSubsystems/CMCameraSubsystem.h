@@ -12,6 +12,22 @@ class AActor;
 class APawn;
 class APlayerController;
 
+UCLASS(EditInlineNew, DefaultToInstanced, Abstract)
+class UCMCameraModeSubsystem_BaseSettings : public UDataAsset
+{
+	GENERATED_BODY()
+public:
+	
+};
+
+
+struct FCMCameraSubsystemContext
+{
+public:
+	bool bWithInterpolation = true;
+	
+};
+
 UCLASS(Blueprintable, BlueprintType, Abstract, EditInlineNew, DefaultToInstanced)
 class CAMERAMODES_API UCMCameraSubsystem : public UObject
 {
@@ -20,7 +36,10 @@ class CAMERAMODES_API UCMCameraSubsystem : public UObject
 public:
 	virtual void Tick(float DeltaTime);
 
-	virtual void OnEnterToCameraMode();
+	virtual void OnEnterToCameraMode(const FCMCameraSubsystemContext& Context);
+
+	virtual void SetSubsystemSettings(UCMCameraModeSubsystem_BaseSettings* NewSettings);
+	virtual UCMCameraModeSubsystem_BaseSettings* GetSubsystemSettings() const;
 	
 	void SetOwningSpringArm(UCMSpringArmComponent* SpringArm);
 	UCMSpringArmComponent* GetOwningSpringArm() const;
